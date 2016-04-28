@@ -74,13 +74,13 @@ show_usage () {
 }
 
 die() {
-  test -n "$@" && warn "$@"
+  test -n "$@" && warn "ERROR: $@" || warn "An error occurred, exiting..."
   show_usage
   exit 1
 }
 
 if [[ "$EUID" -ne 0 ]]; then
-   die "Error: need to be root (use sudo)."
+   die "Need to be root (use sudo)."
 fi
 
 escape_sed() {
@@ -256,7 +256,11 @@ if [[ -z "$DELAY" ]]; then
   echo "Using default delay: $DELAY"
 fi
 
+ifup "$IFACE" >/dev/null 2>&1
 IFACE_IP=$(ip addr show "$IFACE" | egrep -o '([0-9]{1,3}\.){3}[0-9]{1,3}/[0-9]{1,2}')
+if [[ -z "$IFACE_IP" ]]; then
+  die "Invalid interface $IFACE."
+fi
 echo
 echo "Setting up NAT routing on interface $IFACE with IP mask $IFACE_IP..."
 iptables -t nat -F POSTROUTING
