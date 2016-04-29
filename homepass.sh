@@ -213,11 +213,11 @@ if [[ -n "$@" ]]; then
   warn "WARNING: ignoring extra options '$@'"
 fi
 
-if [[ -f '$LAST_MAC_FILE' ]]; then
+if [[ -f "$LAST_MAC_FILE" ]]; then
   if [[ -n "$NOLAST" ]]; then
     echo "File '$LAST_MAC_FILE' exists but we're not using it (-n)."
   else
-    LAST_MAC=$(cat '$LAST_MAC_FILE' | head -n1)
+    LAST_MAC=$(cat "$LAST_MAC_FILE" | head -n1)
     if ! check_mac "$LAST_MAC"; then
       unset LAST_MAC
       warn "WARNING: bad MAC address in '$LAST_MAC_FILE'; using defaults."
