@@ -256,7 +256,7 @@ if [[ -z "$DELAY" ]]; then
   echo "Using default delay: $DELAY"
 fi
 
-ifup "$IFACE" >/dev/null 2>&1
+ifconfig "$IFACE" up >/dev/null 2>&1
 IFACE_IP=$(ip addr show "$IFACE" | egrep -o '([0-9]{1,3}\.){3}[0-9]{1,3}/[0-9]{1,2}')
 if [[ -z "$IFACE_IP" ]]; then
   die "Invalid interface $IFACE."
