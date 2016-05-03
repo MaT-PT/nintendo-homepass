@@ -120,10 +120,10 @@ change_mac() {
   echo
   echo "Changing MAC to $MAC on $IFACE..."
 
+  kill_ap
   ifconfig "$IFACE" down
   ifconfig "$IFACE" hw ether "$MAC"
   ifconfig "$IFACE" up
-  kill_ap
   echo
   hostapd -B <(cat 'hostapd_template.conf' | sed "s/%IFACE%/$(escape_sed "$IFACE")/;s/%SSID%/$(escape_sed "$SSID")/")
 }
