@@ -1,2 +1,3 @@
 /hostapd.allow
 /.last_mac
+/homepass_defaults.conf

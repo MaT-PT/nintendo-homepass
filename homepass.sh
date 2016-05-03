@@ -7,6 +7,8 @@ DEFAULT_SSID='attwifi'
 DEFAULT_DELAY='3m'
 LAST_MAC_FILE='.last_mac'
 
+source homepass.conf
+
 warn() {
   echo "$@" >&2
 }
