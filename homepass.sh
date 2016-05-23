@@ -4,8 +4,9 @@ DEFAULT_PREFIX='4E:53:50:4F:4F'
 DEFAULT_SUFFIX='40'
 DEFAULT_IFACE='wlan0'
 DEFAULT_SSID='attwifi'
-DEFAULT_DELAY='3m'
+DEFAULT_DELAY='1.875m'
 LAST_MAC_FILE='.last_mac'
+LAST_INDEX_FILE='.last_index'
 
 if [[ -f "homepass.conf" ]]; then
   source homepass.conf
@@ -132,7 +133,14 @@ change_mac() {
   hostapd -B <(cat 'hostapd_template.conf' | sed "s/%IFACE%/$(escape_sed "$IFACE")/;s/%SSID%/$(escape_sed "$SSID")/")
 }
 
-while getopts ':m:p:s:S:i:d:nkh' opt; do
+wait_next() {
+  local DELAY=$1
+  echo
+  date "+[%H:%M:%S] Waiting $DELAY"
+  sleep "$DELAY"
+}
+
+while getopts ':m:p:s:S:i:d:f:nkh' opt; do
   case "$opt" in
     m)
       if [[ -n "$PREFIX" ]]; then
@@ -152,7 +160,7 @@ while getopts ':m:p:s:S:i:d:nkh' opt; do
       if [[ -n "$MAC" ]]; then
         die "Can't set a custom prefix with a full MAC address (-m)."
       fi
-      if ! check_mac "${OPTARG}" 5; then
+      if ! check_mac "$OPTARG" 5; then
         die "Invalid MAC prefix: $OPTARG"
       fi
       PREFIX=${OPTARG^^}
@@ -183,6 +191,16 @@ while getopts ':m:p:s:S:i:d:nkh' opt; do
     d)
       DELAY=$OPTARG
       echo "User-set delay: $DELAY"
+      ;;
+
+    f)
+      MAC_LIST_FILE=$OPTARG
+      if [[ ! -f "$MAC_LIST_FILE" ]]; then
+        warn "File '$MAC_LIST_FILE' does not exist."
+        unset MAC_LIST_FILE
+      else
+        echo "Using MAC list file '$MAC_LIST_FILE'."
+      fi
       ;;
 
     n)
@@ -229,6 +247,22 @@ if [[ -f "$LAST_MAC_FILE" ]]; then
   fi
 fi
 
+if [[ -f "$LAST_INDEX_FILE" ]]; then
+  if [[ -n "$NOLAST" ]]; then
+    echo "File '$LAST_INDEX_FILE' exists but we're not using it (-n)."
+  else
+    LAST_INDEX=$(cat "$LAST_INDEX_FILE" | head -n1)
+    TOTAL_LINES=$(wc -l < "$MAC_LIST_FILE")
+    if [[ "$LAST_INDEX" -gt "$TOTAL_LINES" ]]; then
+      warn "WARNING: Line number $LAST_INDEX invalid or too high; using defaults."
+      unset LAST_INDEX
+    fi
+  fi
+fi
+if [[ -z "$LAST_INDEX" ]]; then
+  LAST_INDEX=0
+fi
+
 if [[ -z "$PREFIX" ]]; then
   if [[ -n "$LAST_MAC" ]]; then
     PREFIX=$(echo "$LAST_MAC" | cut -d: -f1-5)
@@ -272,6 +306,38 @@ iptables -t nat -A POSTROUTING -s "$IFACE_IP" ! -d "$IFACE_IP" -j MASQUERADE
 
 if [[ -n "$MAC" ]]; then
   change_mac "$MAC" "$IFACE" "$SSID"
+elif [[ -f "$MAC_LIST_FILE" ]]; then
+  echo "Reading MAC list from file '$MAC_LIST_FILE'."
+  TOTAL_LINES=$(wc -l < "$MAC_LIST_FILE")
+
+  while true; do
+    N=0
+    while read -r LINE; do
+      ((N++))
+      if [[ $N -ge $LAST_INDEX ]]; then
+        echo "$N" > $LAST_INDEX_FILE
+        MAC=$(echo "$LINE" | cut -d, -f1)
+
+        if check_mac "$MAC"; then
+          if echo "$LINE" | grep -F ',' >/dev/null; then
+            SSID_LINE=$(echo "$LINE" | cut -d, -f2)
+          else
+            SSID_LINE=$SSID
+          fi
+
+          echo "Line #$N/$TOTAL_LINES"
+
+          change_mac "$MAC" "$IFACE" "$SSID_LINE"
+
+          wait_next "$DELAY"
+        else
+          warn "Invalid MAC address $MAC, ignoring..."
+        fi
+      fi
+    done < $MAC_LIST_FILE
+
+    LAST_INDEX=0
+  done
 else
   while true; do
     MAC="$PREFIX:$SUFFIX"
@@ -281,8 +347,6 @@ else
 
     SUFFIX=$(printf "%02X" $(echo "ibase=16;($SUFFIX+1)%100" | bc))
 
-    echo
-    echo "[$(date '+%H:%M:%S')] Waiting $DELAY"
-    sleep "$DELAY"
+    wait_next "$DELAY"
   done
 fi
