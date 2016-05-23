@@ -21,7 +21,7 @@ show_help() {
 
   if [[ -n "$1" ]]; then
     # Short format (usage)
-    warn "Usage: $NAME [[[-m MAC_ADDRESS] | [-p MAC_PREFIX] [-s MAC_SUFFIX] [-d DELAY] [-n]] [-S SSID] [-i INTERFACE]] | [-k] | [-h]"
+    warn "Usage: $NAME [[[-m MAC_ADDRESS] | [[-p MAC_PREFIX] [-s MAC_SUFFIX] | [-f MAC_LIST]] [-d DELAY] [-n]] [-S SSID] [-i INTERFACE]] | [-k] | [-h]"
   else
     # Complete help
     warn "Usage: $NAME [-m MAC_ADDRESS] [-S SSID] [-i INTERFACE]"
@@ -41,7 +41,7 @@ show_help() {
     warn "-p MAC_PREFIX"
     warn "      Start a Homepass AP in cycle mode with the given MAC prefix (it won't be changed)."
     warn "      MAC_PREFIX must be a colon-separated 5-byte hexadecimal MAC prefix, eg. 01:23:45:67:89."
-    warn "      If this option is not given and '-m' is not set, the prefix from the previous MAC address"
+    warn "      If this option is not given and '-n' is not set, the prefix from the previous MAC address"
     warn "      stored in '$LAST_MAC_FILE' will be used (defaults to $DEFAULT_PREFIX)."
     warn
     warn "-s MAC_SUFFIX"
@@ -49,8 +49,12 @@ show_help() {
     warn "      It will be incremented every DELAY, starting at MAC_SUFFIX up to FF, then reset to 00 and contine from there."
     warn "      The AP will be restarted every time to refresh its MAC address (expect short disconnections client-side)."
     warn "      MAC_SUFFIX must be a byte in 2-digit hexadecimal form, eg. C9."
-    warn "      If this option is not given and '-m' is not set, the suffix from the previous MAC address"
+    warn "      If this option is not given and '-n' is not set, the suffix from the previous MAC address"
     warn "      stored in '$LAST_MAC_FILE' will be used (defaults to $DEFAULT_SUFFIX)."
+    warn
+    warn "-f MAC_LIST"
+    warn "      Start a Homepass AP in cycle mode, using MAC addresses given in file MAC_LIST."
+    warn "      The last used position in the list is saved in '$LAST_INDEX_FILE', and used to resume the cycle at the right position."
     warn
     warn "-S SSID"
     warn "      Set the SSID for the Homepass AP (defaults to $DEFAULT_PREFIX)."
